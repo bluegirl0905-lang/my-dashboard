@@ -13,10 +13,12 @@ def get_data():
         response = requests.get(URL)
         data = response.json()
         df = pd.DataFrame(data[1:], columns=data[0])
-        # 숫자 데이터가 아닌 항목은 제외하고 숫자만 남김
-        df_numeric = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
-        df_final = pd.concat([df.iloc[:, 0], df_numeric], axis=1)
-        return df_final
+        
+        # 첫 번째 열을 제외한 나머지 열들을 강제로 숫자로 변환
+        for col in df.columns[1:]:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            
+        return df
     except:
         return pd.DataFrame()
 
@@ -24,9 +26,10 @@ df = get_data()
 
 if not df.empty:
     st.subheader("📊 최근 주요 자산 흐름")
+    # 인덱스를 날짜 열로 설정하여 차트 표시
     st.line_chart(df.set_index(df.columns[0]))
     
     st.subheader("📋 최신 데이터 상세")
     st.dataframe(df.tail(10))
 else:
-    st.warning("데이터를 가져오는 중입니다. 잠시만 기다리거나 구글 시트 형식을 확인해 주세요.")
+    st.warning("데이터를 가져오는 중입니다. 잠시만 기다려 주세요.")
