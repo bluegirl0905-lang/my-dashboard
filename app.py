@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 
-st.set_page_config(page_title="오늘의 경제지표", layout="centered")
+st.set_page_config(page_title="경제지표 요약", layout="centered")
 st.title("📊 오늘의 경제지표")
 
 URL = "https://script.google.com/macros/s/AKfycbzrUvcNuPARln8UlCDjUomg9NrLQKRD4kuVH3pAxx7wCYr94uOusy0eO_R3QUK9Lujl/exec"
@@ -11,46 +11,21 @@ URL = "https://script.google.com/macros/s/AKfycbzrUvcNuPARln8UlCDjUomg9NrLQKRD4k
 def get_data():
     try:
         response = requests.get(URL, timeout=15)
+        # 구글 시트에서 데이터를 그대로 리스트 형태의 데이터프레임으로 받습니다.
         data = response.json()
         df = pd.DataFrame(data[1:], columns=data[0])
-        
-        # [수정] 각 열을 하나씩 안전하게 숫자 처리
-        for col in df.columns[1:]:
-            # 데이터를 먼저 문자열로 바꾸고, 콤마 제거 후 숫자로 강제 변환
-            # errors='coerce'를 써서 글자(휴장 등)는 NaN으로 변함
-            df[col] = pd.to_numeric(pd.Series(df[col]).astype(str).str.replace(',', ''), errors='coerce')
-        
-        # NaN(휴장 등)이 된 부분만 0으로 채움
-        df = df.fillna(0)
         return df
     except Exception as e:
-        st.error(f"데이터 처리 에러: {e}")
-        return pd.DataFrame()
+        return None
 
 df = get_data()
 
-if not df.empty:
-    latest = df.iloc[-1]
-    prev = df.iloc[-2] if len(df) > 1 else latest
+if df is not None:
+    # [디버깅] 일단 데이터가 어떻게 생겼는지 화면에 보여줍니다.
+    st.write("데이터 로드 성공!")
+    st.dataframe(df.tail(1)) # 최근 데이터 1줄만 출력
     
-    clean_date = str(latest.iloc[0]).split('T')[0]
-    st.write(f"### 🗓️ 기준일: {clean_date}")
-    
-    groups = {
-        "한국 지수": [1, 2], "환율": [3, 4], "미국지수": [5, 6, 7],
-        "금리": [8, 9], "원자재": [10, 11, 12], "기타": [13, 14]
-    }
-    
-    for group_name, indices in groups.items():
-        st.subheader(group_name)
-        cols = st.columns(3)
-        for i, idx in enumerate(indices):
-            # 인덱스 범위 초과 방지
-            if idx < len(latest):
-                curr_val = latest.iloc[idx]
-                prev_val = prev.iloc[idx]
-                # 등락률 계산
-                delta_per = ((curr_val - prev_val) / prev_val * 100) if prev_val != 0 else 0
-                cols[i % 3].metric(label=latest.index[idx], value=f"{curr_val:,.2f}", delta=f"{delta_per:,.2f}%")
+    # 여기서부터는 나중에 숫자가 확인되면 다시 그룹화 코드를 넣으면 됩니다.
+    st.info("데이터가 위처럼 보인다면, 각 항목이 몇 번째 열(0부터 시작)에 있는지 확인해서 인덱스를 맞춰야 합니다.")
 else:
-    st.warning("데이터를 불러오지 못했습니다. 시트 데이터가 15열까지 정상적으로 존재하는지 확인해주세요.")
+    st.error("데이터를 가져오는 데 실패했습니다. 구글 시트 URL을 다시 확인해주세요.")
