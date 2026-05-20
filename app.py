@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 import requests
 
-st.set_page_config(page_title="경제지표 요약", layout="centered")
-st.title("📊 오늘의 경제지표")
+st.set_page_config(page_title="오늘의 경제지표 요약", layout="centered")
+st.title("📊 오늘의 경제지표 요약")
 
 URL = "https://script.google.com/macros/s/AKfycbzrUvcNuPARln8UlCDjUomg9NrLQKRD4kuVH3pAxx7wCYr94uOusy0eO_R3QUK9Lujl/exec"
 
@@ -12,26 +12,54 @@ def get_data():
     try:
         response = requests.get(URL, timeout=15)
         data = response.json()
-        
-        # 1. 데이터가 리스트 형태인지 확인
-        if not data or len(data) < 2:
-            return None
-        
-        # 2. 열 이름을 강제로 0, 1, 2... 순서로 지정 (중복 이름 에러 방지)
         df = pd.DataFrame(data[1:])
         df.columns = [f"col_{i}" for i in range(df.shape[1])]
+        
+        # 각 col을 숫자로 변환 (에러 발생 시 0으로)
+        for col in df.columns[1:]:
+            df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
         return df
-    except Exception as e:
-        return None
+    except:
+        return pd.DataFrame()
 
 df = get_data()
 
-if df is not None:
-    st.write("✅ 데이터 연결 성공! 아래 표를 보고 어떤 열이 어떤 데이터인지 번호를 확인하세요.")
-    st.dataframe(df.tail(3)) 
+if not df.empty:
+    latest = df.iloc[-1]
+    prev = df.iloc[-2] if len(df) > 1 else latest
     
-    st.write("### 열 번호 확인 가이드")
-    st.write("위 표에서 보고, 원하는 데이터가 몇 번째 'col_X'에 있는지 알려주세요!")
-    st.write("예: col_0은 날짜, col_1은 코스피, col_2는 코스닥...")
+    # col_0이 날짜입니다.
+    st.write(f"### 🗓️ 기준일: {str(latest['col_0']).split('T')[0]}")
+    
+    # col_1부터 확인된 순서대로 매칭 (표 보고 설정한 위치)
+    # col_1: 코스피, col_2: 코스닥, col_3: 환율, col_4: 달러인덱스
+    # col_5: S&P500, col_6: 나스닥, col_7: 다우, col_8: 2Y금리, col_9: 10Y금리
+    # col_10: 구리, col_11: 금, col_12: WTI, col_13: BTC, col_14: VIX
+    
+    groups = {
+        "한국 지수": ["col_1", "col_2"],
+        "환율": ["col_3", "col_4"],
+        "미국지수": ["col_5", "col_6", "col_7"],
+        "금리": ["col_8", "col_9"],
+        "원자재": ["col_10", "col_11", "col_12"],
+        "기타": ["col_13", "col_14"]
+    }
+    
+    # 보여줄 이름 매칭
+    names = {
+        "col_1": "코스피", "col_2": "코스닥", "col_3": "환율", "col_4": "달러인덱스",
+        "col_5": "S&P500", "col_6": "나스닥", "col_7": "다우", "col_8": "2Y금리", "col_9": "10Y금리",
+        "col_10": "구리", "col_11": "금", "col_12": "WTI", "col_13": "BTC", "col_14": "VIX"
+    }
+
+    for group_name, cols in groups.items():
+        st.subheader(group_name)
+        c = st.columns(3)
+        for i, col_name in enumerate(cols):
+            curr_val = latest[col_name]
+            prev_val = prev[col_name]
+            delta = ((curr_val - prev_val) / prev_val * 100) if prev_val != 0 else 0
+            c[i % 3].metric(label=names[col_name], value=f"{curr_val:,.2f}", delta=f"{delta:,.2f}%")
+        st.divider()
 else:
-    st.error("데이터를 가져오는 데 실패했습니다.")
+    st.warning("데이터를 불러오는 중입니다.")
