@@ -12,9 +12,11 @@ def get_data():
     try:
         response = requests.get(URL)
         data = response.json()
-        # 데이터가 2차원 리스트 형태라고 가정하고 DataFrame 생성
         if len(data) > 1:
-            return pd.DataFrame(data[1:], columns=data[0])
+            df = pd.DataFrame(data[1:], columns=data[0])
+            # 숫자가 아닌 열은 모두 제외하고 숫자 데이터만 남기기
+            numeric_df = df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')
+            return pd.concat([df.iloc[:, 0], numeric_df], axis=1)
         return pd.DataFrame()
     except:
         return pd.DataFrame()
@@ -22,15 +24,18 @@ def get_data():
 df = get_data()
 
 if not df.empty:
-    # 가장 마지막 줄(최신 데이터) 가져오기
     latest = df.iloc[-1]
     
-    # 데이터가 제대로 들어왔는지 확인하고 출력
     st.write(f"### 🗓️ 기준일: {latest.iloc[0]}")
-    st.metric(label="핵심 경제 지표", value=f"{latest.iloc[1]}")
     
-    with st.expander("지난 데이터 흐름 확인하기"):
-        st.dataframe(df.tail(7))
+    # 지표가 많으니 가장 최근 데이터에서 숫자 열들만 뽑아서 컬럼별로 보여주기
+    cols = st.columns(3) # 3개씩 배치
+    data_points = latest.iloc[1:4] # 앞쪽 3개 지표만 뽑음
+    
+    for i, (label, value) in enumerate(data_points.items()):
+        cols[i % 3].metric(label=label, value=f"{value:,.2f}")
+    
+    with st.expander("지표 상세 보기 (최근 5일)"):
+        st.dataframe(df.tail(5))
 else:
-    st.warning("데이터를 불러오고 있습니다. 잠시만 기다려 주세요.")
-    st.info("구글 시트의 데이터가 비어있거나 API 연결이 확인 중일 수 있습니다.")
+    st.warning("데이터를 불러오고 있습니다.")
