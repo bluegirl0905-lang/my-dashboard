@@ -29,7 +29,7 @@ if not df.empty:
     prev = df.iloc[-2] if len(df) > 1 else latest
     
     # col_0이 날짜입니다.
-    st.write(f"### 🗓️ 기준일: {str(latest['col_0']).split('T')[0]}")
+    st.write(f"### 🗓️ 데이터 기준: {str(latest['col_0']).split('T')[0]} (미국 마감일 기준)")
     
     # col_1부터 확인된 순서대로 매칭 (표 보고 설정한 위치)
     # col_1: 코스피, col_2: 코스닥, col_3: 환율, col_4: 달러인덱스
