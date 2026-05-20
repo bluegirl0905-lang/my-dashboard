@@ -14,12 +14,13 @@ def get_data():
         data = response.json()
         df = pd.DataFrame(data[1:], columns=data[0])
         
-        # [수정] 데이터프레임 전체가 아니라, 숫자 열(1번째부터 끝까지)만 각각 변환
+        # [수정] 각 열을 하나씩 안전하게 숫자 처리
         for col in df.columns[1:]:
-            # 데이터를 먼저 문자열로 바꾸고, 쉼표 삭제 후 숫자로 변환
-            df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce')
+            # 데이터를 먼저 문자열로 바꾸고, 콤마 제거 후 숫자로 강제 변환
+            # errors='coerce'를 써서 글자(휴장 등)는 NaN으로 변함
+            df[col] = pd.to_numeric(pd.Series(df[col]).astype(str).str.replace(',', ''), errors='coerce')
         
-        # NaN(휴장 등)은 0으로 채움
+        # NaN(휴장 등)이 된 부분만 0으로 채움
         df = df.fillna(0)
         return df
     except Exception as e:
@@ -44,10 +45,12 @@ if not df.empty:
         st.subheader(group_name)
         cols = st.columns(3)
         for i, idx in enumerate(indices):
+            # 인덱스 범위 초과 방지
             if idx < len(latest):
                 curr_val = latest.iloc[idx]
                 prev_val = prev.iloc[idx]
+                # 등락률 계산
                 delta_per = ((curr_val - prev_val) / prev_val * 100) if prev_val != 0 else 0
                 cols[i % 3].metric(label=latest.index[idx], value=f"{curr_val:,.2f}", delta=f"{delta_per:,.2f}%")
 else:
-    st.warning("데이터를 불러오지 못했습니다. 구글 시트의 데이터가 1행에 잘 있는지 확인해주세요.")
+    st.warning("데이터를 불러오지 못했습니다. 시트 데이터가 15열까지 정상적으로 존재하는지 확인해주세요.")
