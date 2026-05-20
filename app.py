@@ -11,9 +11,15 @@ URL = "https://script.google.com/macros/s/AKfycbzrUvcNuPARln8UlCDjUomg9NrLQKRD4k
 def get_data():
     try:
         response = requests.get(URL, timeout=15)
-        # 구글 시트에서 데이터를 그대로 리스트 형태의 데이터프레임으로 받습니다.
         data = response.json()
-        df = pd.DataFrame(data[1:], columns=data[0])
+        
+        # 1. 데이터가 리스트 형태인지 확인
+        if not data or len(data) < 2:
+            return None
+        
+        # 2. 열 이름을 강제로 0, 1, 2... 순서로 지정 (중복 이름 에러 방지)
+        df = pd.DataFrame(data[1:])
+        df.columns = [f"col_{i}" for i in range(df.shape[1])]
         return df
     except Exception as e:
         return None
@@ -21,11 +27,11 @@ def get_data():
 df = get_data()
 
 if df is not None:
-    # [디버깅] 일단 데이터가 어떻게 생겼는지 화면에 보여줍니다.
-    st.write("데이터 로드 성공!")
-    st.dataframe(df.tail(1)) # 최근 데이터 1줄만 출력
+    st.write("✅ 데이터 연결 성공! 아래 표를 보고 어떤 열이 어떤 데이터인지 번호를 확인하세요.")
+    st.dataframe(df.tail(3)) 
     
-    # 여기서부터는 나중에 숫자가 확인되면 다시 그룹화 코드를 넣으면 됩니다.
-    st.info("데이터가 위처럼 보인다면, 각 항목이 몇 번째 열(0부터 시작)에 있는지 확인해서 인덱스를 맞춰야 합니다.")
+    st.write("### 열 번호 확인 가이드")
+    st.write("위 표에서 보고, 원하는 데이터가 몇 번째 'col_X'에 있는지 알려주세요!")
+    st.write("예: col_0은 날짜, col_1은 코스피, col_2는 코스닥...")
 else:
-    st.error("데이터를 가져오는 데 실패했습니다. 구글 시트 URL을 다시 확인해주세요.")
+    st.error("데이터를 가져오는 데 실패했습니다.")
