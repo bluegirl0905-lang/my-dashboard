@@ -12,9 +12,7 @@ def get_data():
     try:
         response = requests.get(URL)
         data = response.json()
-        if len(data) > 1:
-            return pd.DataFrame(data[1:], columns=data[0])
-        return pd.DataFrame()
+        return pd.DataFrame(data[1:], columns=data[0])
     except:
         return pd.DataFrame()
 
@@ -24,26 +22,20 @@ if not df.empty:
     latest = df.iloc[-1]
     st.write(f"### 🗓️ 기준일: {latest.iloc[0]}")
     
-    # 요청하신 그룹별 분류 (인덱스는 구글 시트의 열 순서와 일치해야 합니다)
-    # 만약 데이터가 안 나오면, 시트의 열 순서에 맞춰 [1, 2] 등의 숫자를 조정하세요.
+    # 이제 시트의 열 순서(1번부터 시작)와 완벽하게 일치합니다.
     groups = {
-        "한국 지수": [1, 2],           # 코스피, 코스닥
-        "환율": [3, 4],               # 환율, 달러인덱스
-        "미국지수": [5, 6, 7],        # S&P500, 나스닥, 다우
-        "금리": [8, 9],               # 2Y, 10Y
-        "원자재": [10, 11, 12],       # 구리, 금, WTI
-        "기타": [13, 14]              # BTC, VIX
+        "한국 지수": [1, 2],           # B, C열
+        "환율": [3, 4],               # D, E열
+        "미국지수": [5, 6, 7],        # F, G, H열
+        "금리": [8, 9],               # I, J열
+        "원자재": [10, 11, 12],       # K, L, M열
+        "기타": [13, 14]              # N, O열
     }
 
     for group_name, indices in groups.items():
         st.subheader(group_name)
-        cols = st.columns(3) # 3개씩 배치
+        cols = st.columns(3)
         for i, idx in enumerate(indices):
             if idx < len(latest):
-                label = latest.index[idx]
-                value = latest.iloc[idx]
-                cols[i % 3].metric(label=label, value=f"{value}")
+                cols[i % 3].metric(label=latest.index[idx], value=f"{latest.iloc[idx]}")
         st.divider()
-
-else:
-    st.warning("데이터를 불러오고 있습니다. 시트의 데이터 열 순서를 확인해 주세요!")
