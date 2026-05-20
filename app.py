@@ -12,23 +12,25 @@ def get_data():
     try:
         response = requests.get(URL)
         data = response.json()
-        df = pd.DataFrame(data[1:], columns=data[0])
-        return df
+        # 데이터가 2차원 리스트 형태라고 가정하고 DataFrame 생성
+        if len(data) > 1:
+            return pd.DataFrame(data[1:], columns=data[0])
+        return pd.DataFrame()
     except:
         return pd.DataFrame()
 
 df = get_data()
 
 if not df.empty:
-    # 가장 최신 데이터 가져오기
+    # 가장 마지막 줄(최신 데이터) 가져오기
     latest = df.iloc[-1]
     
-    st.write(f"### 🗓️ 기준일: {latest[0]}")
-    
-    # 주요 지표를 눈에 띄게 배치
-    st.metric(label="핵심 경제 지표", value=f"{latest[1]}")
+    # 데이터가 제대로 들어왔는지 확인하고 출력
+    st.write(f"### 🗓️ 기준일: {latest.iloc[0]}")
+    st.metric(label="핵심 경제 지표", value=f"{latest.iloc[1]}")
     
     with st.expander("지난 데이터 흐름 확인하기"):
-        st.dataframe(df.tail(7)) # 최근 일주일 데이터
+        st.dataframe(df.tail(7))
 else:
     st.warning("데이터를 불러오고 있습니다. 잠시만 기다려 주세요.")
+    st.info("구글 시트의 데이터가 비어있거나 API 연결이 확인 중일 수 있습니다.")
